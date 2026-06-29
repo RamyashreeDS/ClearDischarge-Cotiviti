@@ -22,7 +22,7 @@ from discharge_rag.pipeline import DischargeRAGPipeline
 from discharge_rag.preprocess import preprocess_note, score_readmission_risk
 
 # ── App setup ──────────────────────────────────────────────────────────────────
-app = FastAPI(title="MediGuide", version="1.0.0")
+app = FastAPI(title="ClearDischarge", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
