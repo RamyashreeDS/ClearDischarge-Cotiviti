@@ -1,4 +1,4 @@
-# ClearDischarge — Cotiviti Intern Assessment 2026
+# ClearDischarge — Cotiviti Intern Assessment 
 
 > A fully local, open-source RAG-based agentic AI system for hospital discharge comprehension and post-discharge vital sign monitoring. No cloud. No internet required. No patient data leaves the device.
 
