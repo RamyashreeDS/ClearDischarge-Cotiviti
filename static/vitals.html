@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClearDischarge — Vitals Monitor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #0D1B2A;
+      color: #E0E8F0;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    .nav {
+      background: #0a1520;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #1E3A4A;
+    }
+    .nav-logo { font-size: 18px; font-weight: bold; color: #00A896; }
+    .nav-sub  { font-size: 13px; color: #667788; }
+    .nav-back {
+      margin-left: auto;
+      background: none;
+      border: 1px solid #1E3A4A;
+      color: #8899AA;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .nav-back:hover { border-color: #00A896; color: #00A896; }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    .page-title { font-size: 28px; font-weight: bold; color: #fff; margin-bottom: 6px; }
+    .page-sub   { font-size: 14px; color: #667788; margin-bottom: 32px; }
+
+    .grid { display: grid; grid-template-columns: 380px 1fr; gap: 24px; }
+
+    /* ── Input Panel ── */
+    .panel {
+      background: #0a1520;
+      border: 1px solid #1E3A4A;
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .panel-title { font-size: 15px; font-weight: bold; color: #00A896; margin-bottom: 18px; }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #8899AA;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+
+    .day-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .day-label {
+      font-size: 12px;
+      color: #667788;
+      width: 42px;
+      flex-shrink: 0;
+    }
+    .day-input {
+      flex: 1;
+      background: #0D1B2A;
+      border: 1px solid #1E3A4A;
+      border-radius: 7px;
+      padding: 8px 12px;
+      color: #E0E8F0;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      outline: none;
+    }
+    .day-input:focus { border-color: #00A896; }
+    .unit { font-size: 12px; color: #445566; width: 38px; flex-shrink: 0; }
+
+    .btn-analyze {
+      width: 100%;
+      margin-top: 24px;
+      padding: 13px;
+      background: #00A896;
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+    }
+    .btn-analyze:hover { background: #02C39A; }
+    .btn-analyze:disabled { background: #1E3A4A; color: #445566; cursor: not-allowed; }
+
+    .btn-sample {
+      width: 100%;
+      margin-top: 10px;
+      padding: 9px;
+      background: none;
+      color: #667788;
+      border: 1px solid #1E3A4A;
+      border-radius: 9px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+    }
+    .btn-sample:hover { border-color: #00A896; color: #00A896; }
+
+    /* ── Results Panel ── */
+    .results { display: flex; flex-direction: column; gap: 18px; }
+
+    .placeholder {
+      background: #0a1520;
+      border: 1px dashed #1E3A4A;
+      border-radius: 14px;
+      padding: 60px 24px;
+      text-align: center;
+      color: #445566;
+      font-size: 14px;
+    }
+
+    /* Pattern badge */
+    .pattern-card {
+      border-radius: 14px;
+      padding: 22px 26px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .pattern-card.stable   { background: #0a2818; border: 1px solid #02C39A; }
+    .pattern-card.warning  { background: #2a1e00; border: 1px solid #FF8C00; }
+    .pattern-card.critical { background: #2a0a0a; border: 1px solid #f87171; }
+
+    .pattern-icon { font-size: 36px; }
+    .pattern-label {
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .pattern-label.stable   { color: #02C39A; }
+    .pattern-label.warning  { color: #FF8C00; }
+    .pattern-label.critical { color: #f87171; }
+    .pattern-text { font-size: 15px; color: #C0D0E0; line-height: 1.5; }
+
+    /* Charts */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .chart-card {
+      background: #0a1520;
+      border: 1px solid #1E3A4A;
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .chart-title { font-size: 13px; font-weight: bold; color: #8899AA; margin-bottom: 14px; }
+
+    /* Alerts */
+    .alerts-card {
+      background: #0a1520;
+      border: 1px solid #1E3A4A;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .alerts-title { font-size: 13px; font-weight: bold; color: #8899AA; margin-bottom: 14px; }
+    .alert-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .alert-item.critical { background: #1a0808; border: 1px solid #f8717140; color: #f8a0a0; }
+    .alert-item.warning  { background: #1a1000; border: 1px solid #FF8C0040; color: #FFB84D; }
+    .alert-item.info     { background: #081818; border: 1px solid #00A89640; color: #80D0C8; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .stat-box {
+      background: #0a1520;
+      border: 1px solid #1E3A4A;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-value { font-size: 26px; font-weight: bold; color: #00A896; }
+    .stat-label { font-size: 11px; color: #667788; margin-top: 4px; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: #667788; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo">ClearDischarge</div>
+  <div class="nav-sub">Health Companion</div>
+  <a href="/" class="nav-back">← Back to Main App</a>
+</nav>
+
+<div class="container">
+  <div class="page-title">⚕️ Vitals Monitor</div>
+  <div class="page-sub">Time-series anomaly detection for post-discharge vital signs — 7-day monitoring with pattern recognition and clinical decision support</div>
+
+  <div class="grid">
+
+    <!-- Input Panel -->
+    <div class="panel">
+      <div class="panel-title">📋 Enter 7-Day Readings</div>
+
+      <div class="section-label">Daily Weight</div>
+      <div id="weight-inputs"></div>
+
+      <div class="section-label">Systolic Blood Pressure</div>
+      <div id="bp-inputs"></div>
+
+      <button class="btn-analyze" id="analyze-btn" onclick="analyze()">Analyze Vitals</button>
+      <button class="btn-sample" onclick="loadSample('critical')">Load Critical Sample</button>
+      <button class="btn-sample" onclick="loadSample('warning')">Load Warning Sample</button>
+      <button class="btn-sample" onclick="loadSample('stable')">Load Stable Sample</button>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="results" id="results">
+      <div class="placeholder">
+        Enter 7 days of readings and click Analyze — or load a sample to see the system in action.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Build inputs ──────────────────────────────────────────────────────────────
+const DAYS = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'];
+
+function buildInputs() {
+  const wEl = document.getElementById('weight-inputs');
+  const bEl = document.getElementById('bp-inputs');
+  DAYS.forEach((d, i) => {
+    wEl.innerHTML += `
+      <div class="day-row">
+        <span class="day-label">${d}</span>
+        <input class="day-input" id="w${i}" type="number" step="0.1" placeholder="e.g. 72.0" />
+        <span class="unit">kg</span>
+      </div>`;
+    bEl.innerHTML += `
+      <div class="day-row">
+        <span class="day-label">${d}</span>
+        <input class="day-input" id="b${i}" type="number" step="1" placeholder="e.g. 128" />
+        <span class="unit">mmHg</span>
+      </div>`;
+  });
+}
+
+// ── Sample data ───────────────────────────────────────────────────────────────
+const SAMPLES = {
+  critical: {
+    weight: [70, 70.5, 71, 73.5, 74, 74.5, 76],
+    bp:     [125, 128, 132, 145, 150, 155, 162]
+  },
+  warning: {
+    weight: [68, 68.2, 68.5, 69.1, 69.5, 70.0, 70.4],
+    bp:     [122, 125, 128, 132, 136, 140, 143]
+  },
+  stable: {
+    weight: [75, 74.8, 75.1, 74.9, 75.2, 75.0, 74.8],
+    bp:     [118, 120, 122, 119, 121, 120, 118]
+  }
+};
+
+function loadSample(type) {
+  const s = SAMPLES[type];
+  s.weight.forEach((v, i) => document.getElementById(`w${i}`).value = v);
+  s.bp.forEach((v, i) => document.getElementById(`b${i}`).value = v);
+}
+
+// ── Analyze ───────────────────────────────────────────────────────────────────
+let weightChart = null;
+let bpChart = null;
+
+async function analyze() {
+  const weights = DAYS.map((_, i) => parseFloat(document.getElementById(`w${i}`).value)).filter(v => !isNaN(v));
+  const bps     = DAYS.map((_, i) => parseFloat(document.getElementById(`b${i}`).value)).filter(v => !isNaN(v));
+
+  if (weights.length < 3 && bps.length < 3) {
+    alert('Please enter at least 3 days of readings.');
+    return;
+  }
+
+  document.getElementById('results').innerHTML = '<div class="loading">Analyzing vitals...</div>';
+  document.getElementById('analyze-btn').disabled = true;
+
+  try {
+    const resp = await fetch('/api/vitals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weight_kg: weights, systolic_bp: bps, diastolic_bp: [] })
+    });
+    const data = await resp.json();
+    renderResults(data, weights, bps);
+  } catch (e) {
+    document.getElementById('results').innerHTML = `<div class="placeholder">Error: ${e.message}</div>`;
+  } finally {
+    document.getElementById('analyze-btn').disabled = false;
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderResults(data, weights, bps) {
+  const p = data.pattern;
+  const icons = { stable: '✅', warning: '⚠️', critical: '🚨' };
+
+  // Destroy old charts
+  if (weightChart) { weightChart.destroy(); weightChart = null; }
+  if (bpChart)     { bpChart.destroy();     bpChart = null;     }
+
+  const labels = DAYS.slice(0, Math.max(weights.length, bps.length));
+
+  document.getElementById('results').innerHTML = `
+    <!-- Pattern Card -->
+    <div class="pattern-card ${p}">
+      <div class="pattern-icon">${icons[p]}</div>
+      <div>
+        <div class="pattern-label ${p}">Pattern: ${p.toUpperCase()}</div>
+        <div class="pattern-text">${data.recommendation}</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value">${data.days_monitored}</div>
+        <div class="stat-label">Days Monitored</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color:${p==='critical'?'#f87171':p==='warning'?'#FF8C00':'#02C39A'}">${data.alerts.length}</div>
+        <div class="stat-label">Alerts Detected</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">${data.results.weight ? data.results.weight.total_change + ' kg' : 'N/A'}</div>
+        <div class="stat-label">Total Weight Change</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Weight Trend (kg)</div>
+        <canvas id="weightChart" height="160"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Systolic BP Trend (mmHg)</div>
+        <canvas id="bpChart" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="alerts-card">
+      <div class="alerts-title">🔍 Detected Anomalies & Patterns</div>
+      ${data.alerts.length === 0
+        ? '<div class="alert-item info">✓ No anomalies detected. Readings are within normal range.</div>'
+        : data.alerts.map(a => `
+            <div class="alert-item ${a.toLowerCase().includes('urgent')||a.toLowerCase().includes('crisis')||a.toLowerCase().includes('2.5')||a.toLowerCase().includes('6.0')||a.toLowerCase().includes('hypertensive') ? 'critical' : 'warning'}">
+              <span>⚡</span><span>${a}</span>
+            </div>`).join('')
+      }
+    </div>
+  `;
+
+  // Weight chart
+  if (weights.length >= 2) {
+    const ctx = document.getElementById('weightChart').getContext('2d');
+    const color = p === 'critical' ? '#f87171' : p === 'warning' ? '#FF8C00' : '#02C39A';
+    weightChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels.slice(0, weights.length),
+        datasets: [{
+          label: 'Weight (kg)',
+          data: weights,
+          borderColor: color,
+          backgroundColor: color + '20',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: color,
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#667788', font: { size: 11 } }, grid: { color: '#1E3A4A' } },
+          y: { ticks: { color: '#667788', font: { size: 11 } }, grid: { color: '#1E3A4A' } }
+        }
+      }
+    });
+  }
+
+  // BP chart
+  if (bps.length >= 2) {
+    const ctx = document.getElementById('bpChart').getContext('2d');
+    const bpColor = p === 'critical' ? '#f87171' : p === 'warning' ? '#FF8C00' : '#00A896';
+
+    // Add threshold line at 140
+    bpChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels.slice(0, bps.length),
+        datasets: [
+          {
+            label: 'Systolic BP',
+            data: bps,
+            borderColor: bpColor,
+            backgroundColor: bpColor + '20',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointBackgroundColor: bps.map(v => v >= 140 ? '#f87171' : bpColor),
+            fill: true,
+            tension: 0.3
+          },
+          {
+            label: 'Threshold (140)',
+            data: new Array(bps.length).fill(140),
+            borderColor: '#f8717160',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#667788', font: { size: 11 } }, grid: { color: '#1E3A4A' } },
+          y: { ticks: { color: '#667788', font: { size: 11 } }, grid: { color: '#1E3A4A' } }
+        }
+      }
+    });
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildInputs();
+</script>
+</body>
+</html>
